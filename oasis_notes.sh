@@ -40,7 +40,8 @@ cat entity/entity.json | json_pp
 
 curl https://extreme-ip-lookup.com/json/
 
-STATIC_IP=95.216.184.121
+FILL THIS IN
+STATIC_IP=
 
 ../oasis-node registry node init \
   --signer file \
