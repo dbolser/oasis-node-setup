@@ -1,9 +1,9 @@
 
-latest_binary_url = https://github.com/oasislabs/oasis-core/releases/download/v20.1.1/oasis-node_20.1.1_linux_amd64.tar.gz
-latest_binary_url = https://github.com/oasislabs/oasis-core/releases/download/v20.1.2/oasis-node_20.1.2_linux_amd64.tar.gz
+latest_binary_url=https://github.com/oasislabs/oasis-core/releases/download/v20.1.1/oasis-node_20.1.1_linux_amd64.tar.gz
+latest_binary_url=https://github.com/oasislabs/oasis-core/releases/download/v20.1.2/oasis-node_20.1.2_linux_amd64.tar.gz
 
-latest_genesis_url = https://github.com/oasislabs/public-testnet-artifacts/releases/download/2020-01-15/genesis.json
-latest_genesis_url = https://github.com/oasislabs/public-testnet-artifacts/releases/download/2020-01-23/genesis.json
+latest_genesis_url=https://github.com/oasislabs/public-testnet-artifacts/releases/download/2020-01-15/genesis.json
+latest_genesis_url=https://github.com/oasislabs/public-testnet-artifacts/releases/download/2020-01-23/genesis.json
 
 
 # Lets start somewhere clean eh?
@@ -20,6 +20,10 @@ mkdir -m700 -p {etc,node,node/entity}
 wget $latest_binary_url
 wget $latest_genesis_url -O etc/genesis.json
 
+# Sue me
+sha1sum etc/genesis.json | grep bcd8eb7cee74969dd7446ec9ac43be2042164c20
+
+# What?
 tar zxfv oasis-node_*_linux_amd64.tar.gz
 
 GENESIS_FILE_PATH=$PWD/etc/genesis.json
@@ -28,16 +32,15 @@ cd node/entity
 
 ../../oasis-node registry entity init
 
+ls -l 
+
 cd ../
 
 cat entity/entity.json | json_pp
 
 curl https://extreme-ip-lookup.com/json/
 
-STATIC_IP=66.181.2.210 # CP1
-STATIC_IP=66.181.2.211 # CP2
-STATIC_IP=210.216.165.11 # Genome
-STATIC_IP=210.216.165.21
+STATIC_IP=95.216.184.121
 
 ../oasis-node registry node init \
   --signer file \
@@ -46,16 +49,18 @@ STATIC_IP=210.216.165.21
   --node.is_self_signed \
   --node.role validator
 
+ls -l
+
 ../oasis-node registry entity update \
   --signer.dir $PWD/entity \
   --entity.node.descriptor node_genesis.json
 
 cat entity/entity.json | json_pp
 
-
 cd ../
 
-chmod -R 600 *.pem
+chmod -R 600 node/*.pem
+chmod -R 600 node/entity/*.pem
 
 
 
@@ -105,25 +110,29 @@ tendermint:
 chmod -R go-r,go-w,go-x ./
 
 
-./oasis-node --config $PWD/etc/config.yml &> log-${date}.log &
+./oasis-node --config $PWD/etc/config.yml &> log-$(date --iso).log &
 
-./oasis-node registry entity list -a unix:$PWD/node/internal.sock
+./oasis-node -a unix:$PWD/node/internal.sock \
+	     registry entity list 
 
-./oasis-node \
-    -a unix:$PWD/node/internal.sock \
-    control is-synced \
-    && echo "You are synced" || echo "You are not synced"
+./oasis-node -a unix:$PWD/node/internal.sock \
+	     control is-synced && \
+    echo "You are synced" || echo "You are not synced"
 
-cat entity/entity.json | json_pp
-cat entity/entity.json | json_pp
-cat entity/entity.json | json_pp
+cat node/entity/entity.json | json_pp
+
+## REMEMBER
+# What node team name MUST be 'Team Win'
 
 https://oasisfoundation.typeform.com/to/dlcekq
 
 
 
 
-
+exit
+break
+stop
+ffs!
 
 
 ## Update fuckery
