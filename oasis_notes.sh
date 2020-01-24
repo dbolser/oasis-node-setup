@@ -1,25 +1,36 @@
 
-mkdir -p Build/Oasis
+latest_binary_url = https://github.com/oasislabs/oasis-core/releases/download/v20.1.1/oasis-node_20.1.1_linux_amd64.tar.gz
+latest_binary_url = https://github.com/oasislabs/oasis-core/releases/download/v20.1.2/oasis-node_20.1.2_linux_amd64.tar.gz
 
-cd Build/Oasis
+latest_genesis_url = https://github.com/oasislabs/public-testnet-artifacts/releases/download/2020-01-15/genesis.json
+latest_genesis_url = https://github.com/oasislabs/public-testnet-artifacts/releases/download/2020-01-23/genesis.json
 
-wget https://github.com/oasislabs/oasis-core/releases/download/v20.1.1/oasis-node_20.1.1_linux_amd64.tar.gz
 
-tar zxfv oasis-node_20.1.1_linux_amd64.tar.gz
+# Lets start somewhere clean eh?
 
-wget https://github.com/oasislabs/public-testnet-artifacts/releases/download/2020-01-15/genesis.json
+mkdir -p Oasis && cd Oasis
+
+# I have no idea why the setup documentation distinguishes between
+# 'node' and 'server', it's typical bad documentation, creating extra
+# complexity where there is none or not explaining properly.
 
 mkdir -m700 -p {entity,node}
+mkdir -m700 -p {etc,node,node/entity}
 
-GENESIS_FILE_PATH=$PWD/genesis.json
+wget $latest_binary_url
+wget $latest_genesis_url -O etc/genesis.json
 
-cd entity/
+tar zxfv oasis-node_*_linux_amd64.tar.gz
 
-../oasis-node registry entity init
+GENESIS_FILE_PATH=$PWD/etc/genesis.json
 
-cat entity.json | json_pp
+cd node/entity
 
-cd ../node/
+../../oasis-node registry entity init
+
+cd ../
+
+cat entity/entity.json | json_pp
 
 curl https://extreme-ip-lookup.com/json/
 
@@ -30,43 +41,26 @@ STATIC_IP=210.216.165.21
 
 ../oasis-node registry node init \
   --signer file \
-  --signer.dir $PWD/../entity \
+  --signer.dir $PWD/entity \
   --node.consensus_address $STATIC_IP:26656 \
   --node.is_self_signed \
   --node.role validator
 
 ../oasis-node registry entity update \
-  --signer.dir $PWD/../entity \
+  --signer.dir $PWD/entity \
   --entity.node.descriptor node_genesis.json
 
-cat ../entity/entity.json | json_pp
+cat entity/entity.json | json_pp
 
-
-### SERVER FFS
-
-#wget https://github.com/oasislabs/oasis-core/releases/download/v20.1.1/oasis-node_20.1.1_linux_amd64.tar.gz
-
-#tar zxfv oasis-node_20.1.1_linux_amd64.tar.gz
 
 cd ../
 
-mkdir -m700 -p {etc,node,node/entity}
+chmod -R 600 *.pem
 
-cd node
-#scp 66.181.2.210:Build/Oasis/oasis-node/node/* ./
-#chmod -R 600 *.pem
 
-cd entity/
-
-#scp 66.181.2.210:Build/Oasis/oasis-node/entity/entity.json  ./
-cp ../../entity/entity.json ./
-
-cd ../../etc/
-
-wget https://github.com/oasislabs/public-testnet-artifacts/releases/download/2020-01-15/genesis.json
 
 echo "
-datadir: /BiO/Access/home/dmb/Build/Oasis/node
+datadir: $PWD/node
 
 log:
   level:
@@ -76,11 +70,11 @@ log:
   format: JSON
 
 genesis:
-  file: /BiO/Access/home/dmb/Build/Oasis/etc/genesis.json
+  file: $PWD/etc/genesis.json
 
 worker:
   registration:
-    entity: /BiO/Access/home/dmb/Build/Oasis/node/entity/entity.json
+    entity: $PWD/node/entity/entity.json
 
 consensus:
   validator: true
@@ -103,16 +97,25 @@ tendermint:
 
   seed:
     - 'D14B9192C94F437E9FA92A755D3CC0341F2E87CF@34.82.86.53:26656'
-" > config.yml
+" > etc/config.yml
 
-cd ../
 
+
+## FFS, talk about crappy setup instructions!
 chmod -R go-r,go-w,go-x ./
 
-./oasis-node --config $PWD/etc/config.yml
+
+./oasis-node --config $PWD/etc/config.yml &> log-${date}.log &
 
 ./oasis-node registry entity list -a unix:$PWD/node/internal.sock
 
+./oasis-node \
+    -a unix:$PWD/node/internal.sock \
+    control is-synced \
+    && echo "You are synced" || echo "You are not synced"
+
+cat entity/entity.json | json_pp
+cat entity/entity.json | json_pp
 cat entity/entity.json | json_pp
 
 https://oasisfoundation.typeform.com/to/dlcekq
@@ -140,49 +143,3 @@ HEIGHT_TO_DUMP=93000
 	     --datadir=$PWD/node \
 	     --log.level info
 
-wget https://github.com/oasislabs/oasis-core/releases/download/v20.1.2/oasis-node_20.1.2_linux_amd64.tar.gz
-
-tar zxfv oasis-node_20.1.2_linux_amd64.tar.gz
-
-wget https://github.com/oasislabs/public-testnet-artifacts/releases/download/2020-01-23/genesis.json -O etc/genesis.json
-sha1sum etc/genesis.json 
-#bcd8eb7cee74969dd7446ec9ac43be2042164c20  etc/genesis.json
-
-./oasis-node --config $PWD/etc/config.yml
- 
-
-
-./oasis-node \
-    -a unix:$PWD/node/internal.sock \
-    control is-synced \
-    && echo "You are synced" || echo "You are not synced"
-
-
-cat entity/entity.json | json_pp
-
-
-
-
-
-./oasis-node -h |less
-
-# Oasis Node
-
-# Usage:
-#   oasis-node [flags]
-#   oasis-node [command]
-
-# Available Commands:
-#   consensus    consensus backend commands
-#   control      node control interface utilities
-#   debug        debug utilities
-#   genesis      genesis block utilities
-#   help         Help about any command
-#   ias          IAS related utilities
-#   identity     identity interface utilities
-#   keymanager   keymanager utilities
-#   registry     registry backend utilities
-#   signer       signer backend utilities
-#   stake        stake token backend utilities
-#   storage      storage services and utilities
-#   unsafe-reset reset the node state (UNSAFE)
