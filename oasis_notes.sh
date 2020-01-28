@@ -130,6 +130,67 @@ https://oasisfoundation.typeform.com/to/dlcekq
 
 
 
+## Steaking
+GENESIS_FILE_PATH=$PWD/etc/genesis.json
+ENTITY_DIR_PATH=$PWD/entity
+OUTPUT_TX_FILE_PATH=$PWD/signed-escrow.tx
+ACCOUNT_ID=$(
+    cat $PWD/node/entity/entity.json | \
+	jq -r .id | base64 -d | hexdump -v -e '/1 "%02x" ')
+
+./oasis-node stake account info \
+	     --stake.account.id $ACCOUNT_ID \
+	     -a unix:$PWD/node/internal.sock | json_pp
+
+./oasis-node stake account gen_escrow \
+	     --genesis.file $GENESIS_FILE_PATH \
+	     --signer file \
+	     --signer.dir $ENTITY_DIR_PATH \
+	     --stake.escrow.account $ACCOUNT_ID \
+	     --stake.amount 100000000000 \
+	     --transaction.file $OUTPUT_TX_FILE_PATH \
+	     --transaction.fee.gas 1000 \
+	     --transaction.fee.amount 1 \
+	     --transaction.nonce 0
+
+OUTPUT_REGISTER_TX_FILE_PATH=$PWD/signed-register.tx
+
+./oasis-node registry entity gen_register \
+	     --genesis.file $GENESIS_FILE_PATH \
+	     --signer file \
+	     --signer.dir $ENTITY_DIR_PATH \
+	     --transaction.file $OUTPUT_REGISTER_TX_FILE_PATH \
+	     --transaction.fee.gas 1000 \
+	     --transaction.fee.amount 1 \
+	     --transaction.nonce 1
+
+
+
+./oasis-node consensus submit_tx \
+	     --transaction.file $PWD/signed-escrow.tx \
+	     -a unix:$PWD/node/internal.sock
+
+./oasis-node consensus submit_tx \
+	     --transaction.file $PWD/signed-register.tx \
+	     -a unix:$PWD/node/internal.sock
+
+
+./oasis-node stake account info \
+	     --stake.account.id $ACCOUNT_ID \
+	     -a unix:$PWD/node/internal.sock | json_pp
+
+
+NODE_CONSENSUS_ID="$(cat $PWD/node/consensus_pub.pem | grep "^-----" -v)"
+
+
+
+./oasis-node registry node list -v \
+	     -a unix:$PWD/node/internal.sock | grep $NODE_CONSENSUS_ID
+
+
+
+
+
 exit
 break
 stop
